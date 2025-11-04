@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+// NOTE: NEAR networks are EXPERIMENTAL - verify/settle support is work-in-progress
 export const NetworkSchema = z.enum([
   "base-sepolia",
   "base",
@@ -13,6 +14,8 @@ export const NetworkSchema = z.enum([
   "polygon",
   "polygon-amoy",
   "peaq",
+  "near-mainnet",  // EXPERIMENTAL
+  "near-testnet",  // EXPERIMENTAL
 ]);
 export type Network = z.infer<typeof NetworkSchema>;
 
