@@ -1,0 +1,78 @@
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>x402 IIFE demo</title>
+    <style>
+      body { font-family: system-ui, sans-serif; line-height: 1.6; margin: 2rem; max-width: 800px; }
+      input { width: 400px; padding: 0.5rem; }
+      label { display: block; margin-bottom: 1rem; }
+      button { padding: 0.5rem 1rem; margin-top: 1rem; cursor: pointer; background: #0052ff; color: white; border: none; border-radius: 5px; }
+      button:disabled { background: #ccc; }
+      pre { background: #f4f4f4; padding: 1rem; margin-top: 1rem; overflow-x: auto; border-radius: 5px; }
+    </style>
+  </head>
+  <body>
+    <h1>x402 Static HTML Demo (IIFE)</h1>
+
+    <label>Payee (0x…): <input id="payTo" placeholder="Enter a valid EVM address (Required)" /></label>
+    <label>Amount (wei): <input id="amount" value="1000000000000000" /></label>
+    <label>Network: <input id="network" value="base-sepolia" /></label>
+
+    <button id="btn">Create Payment Header (using $pay)</button>
+    <pre id="out">Output will appear here...</pre>
+
+    <!-- Local build path (relative from this HTML file location) -->
+    <!-- Assumes the build has been run: pnpm -w build -->
+    <!-- Path: up from examples/html/basic-payment/ to typescript/, then down into packages/x402/dist/... -->
+    <script src="../../../typescript/packages/x402/dist/iife/browser/global.js"></script>
+
+    <!-- Or use CDN after publishing: -->
+    <!-- <script src="https://unpkg.com/x402@latest"></script> -->
+
+    <script>
+      const out = document.getElementById('out');
+      const btn = document.getElementById('btn');
+
+      // Verification check
+      if (typeof $pay === 'undefined' || typeof X402 === 'undefined') {
+        out.textContent = "Error: X402 globals are not loaded. Check script path or build status.";
+      } else {
+        console.log("X402 and $pay loaded successfully.");
+      }
+
+      btn.onclick = async () => {
+        const payTo = document.getElementById('payTo').value.trim();
+        const amount = document.getElementById('amount').value.trim();
+        const network = document.getElementById('network').value.trim();
+
+        // Basic validation
+        if (!payTo || !/^0x[a-fA-F0-9]{40}$/.test(payTo)) {
+            out.textContent = "Error: Please enter a valid Payee address.";
+            return;
+        }
+
+        out.textContent = "Processing... Please check your wallet extension.";
+        btn.disabled = true;
+
+        try {
+          // Using the global $pay shorthand (which takes an options object)
+          const header = await $pay({
+            payTo: payTo,
+            maxAmountRequired: amount,
+            network: network,
+            // asset: "0xTOKEN...", // optional ERC-20
+          });
+
+          out.textContent = "Success! X-PAYMENT Header:\n\n" + header;
+        } catch (e) {
+          out.textContent = "Error: " + (e?.message || String(e));
+          console.error(e);
+        } finally {
+          btn.disabled = false;
+        }
+      };
+    </script>
+  </body>
+</html>

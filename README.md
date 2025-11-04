@@ -23,6 +23,76 @@ It's time for an open, internet-native form of payments. A payment rail that doe
 - **Trust minimizing:** all payment schemes must not allow for the facilitator or resource server to move funds, other than in accordance with client intentions
 - **Easy to use:** x402 needs to be 10x better than existing ways to pay on the internet. This means abstracting as many details of crypto as possible away from the client and resource server, and into the facilitator. This means the client/server should not need to think about gas, rpc, etc.
 
+## Usage
+
+x402 supports multiple integration patterns to fit your needs:
+
+### Server-Side (Node.js)
+
+Use x402 middleware with your favorite framework:
+
+```typescript
+import { paymentMiddleware } from "x402-express";
+
+app.use(
+  paymentMiddleware("0xYourAddress", { "/your-endpoint": "$0.01" })
+);
+```
+
+See [examples/typescript/servers](examples/typescript/servers) for Express, Hono, and Next.js examples.
+
+### Browser / Static HTML (IIFE)
+
+Add payments to static HTML with a single `<script>` tag:
+
+```html
+<!-- Load x402 from CDN or local build -->
+<script src="https://unpkg.com/x402@latest"></script>
+
+<script>
+  // Use the $pay shorthand for quick demos
+  const header = await $pay({
+    payTo: "0xYourAddress",
+    maxAmountRequired: "1000000000000000", // 0.001 ETH in wei
+    network: "base-sepolia",
+  });
+
+  // Or use the full API
+  const header = await X402.evm.createPaymentHeaderFromWindowEvm({
+    scheme: "exact",
+    network: "base-sepolia",
+    maxAmountRequired: "1000000000000000",
+    resource: window.location.href,
+    description: "Payment for resource",
+    mimeType: "text/plain",
+    payTo: "0xYourAddress",
+    maxTimeoutSeconds: 300,
+    asset: "0x0000000000000000000000000000000000000000", // native token
+  });
+</script>
+```
+
+**Note:** Browser builds use `window.ethereum` (EIP-1193) for wallet interactions. Users need a compatible wallet extension like MetaMask, Coinbase Wallet, etc.
+
+See [examples/html/basic-payment](examples/html/basic-payment) for a complete example.
+
+### Bundlers (ESM/CJS)
+
+For modern JavaScript bundlers (Webpack, Vite, etc.):
+
+```typescript
+// Client-side browser helpers
+import * as X402Browser from "x402/browser";
+
+const header = await X402Browser.evm.createPaymentHeaderFromWindowEvm(requirements);
+```
+
+```typescript
+// Server-side or Node.js
+import { createPaymentHeader } from "x402/client";
+import { verifyPaymentHeader } from "x402/verify";
+```
+
 ## Ecosystem
 
 The x402 ecosystem is growing! Check out our [ecosystem page](https://x402.org/ecosystem) to see projects building with x402, including:
