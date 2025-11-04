@@ -1,21 +1,47 @@
+// Lightweight, browser-safe surface for IIFE global `xf`.
+// Re-exports are intentionally narrow for hackathon console use.
 
-// Create a stable global for IIFE builds: window.X402 and $pay (demo sugar)
-import * as X402 from "./index";
+import * as client from "../client";
+import * as schemes from "../schemes";
+import * as shared from "../shared";
+import * as verify from "../verify";
+import * as facilitator from "../facilitator";
 
-try {
-  // Freeze a stable global and make it enumerable but not reconfigurable
-  Object.defineProperty(globalThis as any, "X402", {
-    value: X402,
-    enumerable: true,
-    configurable: false,
-    writable: false,
-  });
-  // Add convenience shorthand
-  (globalThis as any).$pay = X402.evm.quickPay;
-} catch (error) {
-  // Best-effort fallback
-  (globalThis as any).X402 = X402;
-  (globalThis as any).$pay = (X402 as any).evm.quickPay;
+type XF = {
+  version: string;
+  client: typeof client;
+  schemes: typeof schemes;
+  shared: typeof shared;
+  verify: typeof verify;
+  facilitator: typeof facilitator;
+};
+
+function attachGlobal(): XF | undefined {
+  const g =
+    (globalThis as any) ??
+    (typeof self !== "undefined" ? (self as any) : undefined) ??
+    (typeof window !== "undefined" ? (window as any) : undefined);
+
+  if (!g) return;
+
+  const api: XF = {
+    version: "iife",
+    client,
+    schemes,
+    shared,
+    verify,
+    facilitator,
+  };
+
+  // If the banner already created g.xf, merge onto it (then footer freezes).
+  if (!g.xf) {
+    Object.defineProperty(g, "xf", { value: {}, configurable: true, writable: true });
+  }
+  Object.assign(g.xf, api);
+  return api;
 }
 
-export default X402;
+// When bundled as IIFE, this executes once and populates window.xf
+attachGlobal();
+
+export type { XF };

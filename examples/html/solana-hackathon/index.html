@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>x402 IIFE Demo (Solana/XF)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- IIFE build exposes window.xf (deep-frozen) -->
+  <script src="https://unpkg.com/x402/dist/index.global.js"></script>
+  <style>
+    body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial; margin: 2rem; }
+    button { padding: .6rem 1rem; font-size: 1rem; }
+    pre { background:#0b0b0b; color:#e7e7e7; padding:1rem; border-radius:.5rem; overflow:auto; }
+  </style>
+</head>
+<body>
+  <h1>x402 IIFE + DevTools demo</h1>
+  <p>Open DevTools and try <code>xf</code>:</p>
+  <pre>
+xf.version
+// Make a client header (example inputs; wire real values per your facilitator)
+await xf.client.createPaymentHeader({
+  method: "GET",
+  url: "https://example.com/protected",
+  bodyHash: "",
+  scheme: "exact",
+  network: "svm", // or "evm" / "near"
+  resource: { id: "price:premium" }
+});
+
+// Run a verify call against your facilitator
+await xf.verify.useFacilitator({
+  facilitatorUrl: "https://your-facilitator/verify",
+  payload: { /* ... as per x402 exact scheme */ }
+});
+  </pre>
+
+  <button id="btn">Quick sanity</button>
+  <pre id="out"></pre>
+
+  <script>
+    (async function () {
+      const out = document.getElementById("out");
+      function log(o){ out.textContent = (typeof o === "string") ? o : JSON.stringify(o, null, 2); }
+
+      document.getElementById("btn").onclick = async () => {
+        try {
+          log({ xfKeys: Object.keys(xf) });
+        } catch (e) {
+          log({ error: String(e) });
+        }
+      };
+    })();
+  </script>
+</body>
+</html>

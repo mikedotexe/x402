@@ -63,9 +63,9 @@
     "wagmi": "^2.15.6",
     "zod": "^3.24.2"
   },
-  "browser": "./dist/iife/browser/global.js",
-  "unpkg": "./dist/iife/browser/global.js",
-  "jsdelivr": "./dist/iife/browser/global.js",
+  "browser": "./dist/index.global.js",
+  "unpkg": "./dist/index.global.js",
+  "jsdelivr": "./dist/index.global.js",
   "exports": {
     "./browser": {
       "types": "./dist/esm/browser/index.d.mts",
