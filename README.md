@@ -43,38 +43,49 @@ See [examples/typescript/servers](examples/typescript/servers) for Express, Hono
 
 ### Browser / Static HTML (IIFE)
 
-Add payments to static HTML with a single `<script>` tag:
+**🚀 New!** Accept payments with zero build tools. Just load x402 from CDN:
 
 ```html
-<!-- Load x402 from CDN or local build -->
-<script src="https://unpkg.com/x402@latest"></script>
+<!-- Load x402 from CDN -->
+<script src="https://unpkg.com/@coinbase/x402/dist/umd/browser.global.js"></script>
 
 <script>
-  // Use the $pay shorthand for quick demos
-  const header = await $pay({
-    payTo: "0xYourAddress",
-    maxAmountRequired: "1000000000000000", // 0.001 ETH in wei
-    network: "base-sepolia",
-  });
+  // window.x402 is now available (window.xf is an alias)
 
-  // Or use the full API
-  const header = await X402.evm.createPaymentHeaderFromWindowEvm({
-    scheme: "exact",
-    network: "base-sepolia",
-    maxAmountRequired: "1000000000000000",
-    resource: window.location.href,
-    description: "Payment for resource",
-    mimeType: "text/plain",
-    payTo: "0xYourAddress",
-    maxTimeoutSeconds: 300,
-    asset: "0x0000000000000000000000000000000000000000", // native token
-  });
+  // Create viem client from MetaMask
+  const viemClient = window.x402.browser.viemAdapter.createViemClientFromProvider(
+    window.ethereum,
+    84532 // Base Sepolia
+  );
+
+  // Create payment header
+  const header = await window.x402.client.createPaymentHeader(
+    viemClient,
+    1, // x402Version
+    {
+      scheme: "exact",
+      network: "base-sepolia",
+      asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", // USDC on Base Sepolia
+      amount: "10000", // 0.01 USDC (6 decimals)
+      payTo: "0xYourAddress",
+      resource: window.location.href,
+    }
+  );
+
+  // Send to facilitator for verification and settlement
+  // See docs/quickstart-html.md for complete example
 </script>
 ```
 
-**Note:** Browser builds use `window.ethereum` (EIP-1193) for wallet interactions. Users need a compatible wallet extension like MetaMask, Coinbase Wallet, etc.
+**Features:**
+- ✅ Zero build tools required
+- ✅ Direct facilitator integration
+- ✅ Optional witness binding for resource integrity
+- ✅ MetaMask, Coinbase Wallet, etc. supported
 
-See [examples/html/basic-payment](examples/html/basic-payment) for a complete example.
+**📚 [90-Second Quickstart Guide](docs/quickstart-html.md)** | [Full Demo](examples/html/base-iife-direct.html)
+
+**Note:** Browser builds use `window.ethereum` (EIP-1193) for wallet interactions. Users need a compatible wallet extension like MetaMask, Coinbase Wallet, etc.
 
 ### Bundlers (ESM/CJS)
 

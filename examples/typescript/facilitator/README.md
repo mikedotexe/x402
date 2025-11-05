@@ -1,123 +1,164 @@
-# x402 Facilitator Example
+# x402 TypeScript Facilitator
 
-This is an example implementation of an x402 facilitator service that handles payment verification and settlement for the x402 payment protocol. This implementation is for learning purposes and demonstrates how to build a facilitator service.
+Production-ready facilitator for x402 payments on EVM (Base/Base Sepolia) and SVM (Solana Devnet).
 
-For production use, we recommend using:
+## Features
 
-- Testnet: https://x402.org/facilitator
-- Production: https://api.cdp.coinbase.com/platform/v2/x402
+- ✅ **Multi-chain support**: Base, Base Sepolia, Solana Devnet
+- ✅ **CORS enabled**: Works with browser apps (configurable)
+- ✅ **Witness verification**: Optional EIP-191 resource binding
+- ✅ **Structured logging**: JSON logs with transaction details
+- ✅ **Health checks**: `/health` and `/version` endpoints
+- ✅ **Type-safe**: Full TypeScript with Zod validation
 
-## Overview
-
-The facilitator provides two main endpoints:
-
-- `/verify`: Verifies x402 payment payloads
-- `/settle`: Settles x402 payments by signing and broadcasting transactions
-- `/supported`: Returns the payment kinds that are supported by the facilitator
-
-This example demonstrates how to:
-
-1. Set up a basic Express server to handle x402 payment verification and settlement
-2. Integrate with the x402 protocol's verification and settlement functions
-3. Handle payment payload validation and error cases
-
-## Prerequisites
-
-- Node.js v20+ (install via [nvm](https://github.com/nvm-sh/nvm))
-- pnpm v10 (install via [pnpm.io/installation](https://pnpm.io/installation))
-- A valid Ethereum private key and/or Solana private key
-- Base Sepolia testnet ETH and/or Solana Devnet SOL for transaction fees
-
-## Setup
-
-1. Install and build all packages from the typescript examples root:
+## Quick Start
 
 ```bash
-cd ..
+# Install dependencies
 pnpm install
-pnpm build
-cd facilitator
-```
 
-2. Create a `.env` file with the following variables:
+# Copy environment template
+cp .env.example .env
 
-```env
-EVM_PRIVATE_KEY=0xYourPrivateKey
-SVM_PRIVATE_KEY=solanaprivatekey
-```
+# Add your private key to .env
+# EVM_PRIVATE_KEY=0x...your-key-here
 
-3. Start the server:
-
-```bash
+# Start the facilitator
 pnpm dev
 ```
 
-The server will start on http://localhost:3000
+The facilitator will start on `http://localhost:3000`.
+
+## Environment Variables
+
+### Required
+
+```bash
+# At least one chain is required
+EVM_PRIVATE_KEY=0x...    # For Base/Base Sepolia
+SVM_PRIVATE_KEY=...       # For Solana Devnet (optional)
+```
+
+### Optional
+
+```bash
+# Custom RPC endpoints
+SVM_RPC_URL=https://api.devnet.solana.com
+
+# Witness verification
+WITNESS_REQUIRED=false    # Set to "true" to require witness on all payments
+
+# Server
+PORT=3000
+NODE_ENV=development
+```
 
 ## API Endpoints
 
-### GET /supported
+### GET /health
 
-Returns information the payment kinds that the facilitator supports.
+Health check endpoint.
 
-Sample Response
-
-```json5
-[
-  {
-    "x402Version": 1,
-    "scheme": "exact",
-    "network": "base-sepolia"
-    "extra": {}
-  },
-  {
-    "x402Version": 1,
-    "scheme": "exact",
-    "network": "solana-devnet"
-    "extra": {
-      "feePayer": "SolanaAddress"
-    }
-  },
-]
+**Response:**
+```json
+{
+  "status": "ok",
+  "timestamp": 1704067200000
+}
 ```
 
-### GET /verify
+### GET /version
 
-Returns information about the verify endpoint.
+Version and configuration info.
+
+**Response:**
+```json
+{
+  "version": "0.1.0",
+  "networks": ["base", "base-sepolia", "solana-devnet"],
+  "witnessRequired": false
+}
+```
+
+### GET /supported
+
+Returns supported payment kinds.
+
+**Response:**
+```json
+{
+  "kinds": [
+    {
+      "x402Version": 1,
+      "scheme": "exact",
+      "network": "base-sepolia"
+    }
+  ]
+}
+```
 
 ### POST /verify
 
-Verifies an x402 payment payload.
+Verifies a payment header without executing it.
 
-Request body:
-
-```typescript
+**Request Body:**
+```json
 {
-  payload: string; // x402 payment payload
-  details: PaymentRequirements; // Payment requirements
+  "x402Version": 1,
+  "paymentHeader": "base64-encoded-header",
+  "paymentRequirements": {
+    "scheme": "exact",
+    "network": "base-sepolia",
+    "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    "amount": "10000",
+    "payTo": "0xRecipientAddress",
+    "resource": "https://example.com/api/data"
+  }
 }
 ```
 
-### GET /settle
+**Response (Success):**
+```json
+{
+  "isValid": true
+}
+```
 
-Returns information about the settle endpoint.
+**Response (Failure):**
+```json
+{
+  "isValid": false,
+  "invalidReason": "witness_error: digest_mismatch"
+}
+```
 
 ### POST /settle
 
-Settles an x402 payment by signing and broadcasting the transaction.
+Executes the payment on-chain.
 
-Request body:
+**Request Body:** Same as `/verify`
 
-```typescript
+**Response:**
+```json
 {
-  payload: string; // x402 payment payload
-  details: PaymentRequirements; // Payment requirements
+  "transaction": "0x1234...abcd",
+  "networkId": "base-sepolia"
 }
 ```
 
-## Learning Resources
+## Witness Verification
 
-This example is designed to help you understand how x402 facilitators work. For more information about the x402 protocol and its implementation, visit:
+Enable witness verification to bind payments to specific resources.
 
-- [x402 Protocol Documentation](https://x402.org)
-- [Coinbase Developer Platform](https://www.coinbase.com/developer-platform)
+```bash
+# .env
+WITNESS_REQUIRED=true
+```
+
+## Testing
+
+See [Quickstart Guide](../../../docs/quickstart-html.md) for end-to-end testing with the HTML demo.
+
+## License
+
+Apache-2.0

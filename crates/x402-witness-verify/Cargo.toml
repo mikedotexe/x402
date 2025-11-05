@@ -1,0 +1,22 @@
+[package]
+name = "x402-witness-verify"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "EVM witness (resource binding) verifier for x402; server + wasm"
+
+[lib]
+crate-type = ["rlib", "cdylib"] # cdylib enables wasm-pack --target web
+
+[features]
+default = []
+wasm = ["wasm-bindgen"]        # enable wasm exports
+
+[dependencies]
+sha3 = "0.10"                  # Keccak256
+k256 = { version = "0.13", features = ["ecdsa"] }
+hex = "0.4"
+url = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+wasm-bindgen = { version = "0.2", optional = true }

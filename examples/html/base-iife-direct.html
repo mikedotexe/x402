@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>x402 IIFE — Direct Facilitator (Base + optional EVM witness)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- IIFE build exposes immutable window.x402 (and window.xf alias) -->
+  <script src="../../typescript/packages/x402/dist/umd/browser.global.js"></script>
+
+  <!-- Minimal helper for keccak + signature utilities -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6/dist/ethers.min.js"></script>
+
+  <style>
+    :root { --pad: .6rem; }
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial;
+      margin: 2rem;
+      max-width: 900px;
+    }
+    .row {
+      display:flex;
+      gap:.5rem;
+      flex-wrap:wrap;
+      align-items:center;
+      margin: .4rem 0 .8rem;
+    }
+    label, input, select, button { font-size: 1rem; }
+    input[type=text], input[type=number] {
+      padding: var(--pad);
+      min-width: 22rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      padding: var(--pad) 1rem;
+      background: #0052FF;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    button:hover { background: #0041CC; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    pre {
+      background:#0b0b0b;
+      color:#e7e7e7;
+      padding:1rem;
+      border-radius:.5rem;
+      overflow:auto;
+      max-height: 600px;
+    }
+    .muted { opacity:.8; }
+    .header {
+      background: linear-gradient(135deg, #0052FF 0%, #0041CC 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .section {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+    }
+    .section h2 {
+      margin-top: 0;
+      font-size: 1.1rem;
+    }
+    .status {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      margin-left: 10px;
+    }
+    .status.ok { background: #d4edda; color: #155724; }
+    .status.error { background: #f8d7da; color: #721c24; }
+    .status.pending { background: #fff3cd; color: #856404; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>x402 Direct Facilitator Demo</h1>
+    <p>Pay-per-use API with window.x402 + optional EIP-191 witness binding</p>
+    <p style="opacity: 0.9; font-size: 0.9rem;">Base Sepolia • EIP-3009 • USDC • Direct facilitator integration</p>
+  </div>
+
+  <div class="section">
+    <h2>🔧 Configuration</h2>
+    <div class="row">
+      <label for="fac">Facilitator URL:</label>
+      <input id="fac" type="text" value="http://localhost:8080" />
+      <button id="btnSupported">/supported</button>
+    </div>
+
+    <div class="row">
+      <label for="net">Network:</label>
+      <select id="net">
+        <option value="base-sepolia">Base Sepolia (testnet)</option>
+        <option value="base">Base Mainnet</option>
+      </select>
+      <button id="btnSwitch">Switch in wallet</button>
+    </div>
+
+    <div class="row">
+      <label>USDC amount:</label>
+      <input id="amount" type="number" step="0.001" min="0.001" value="0.01" />
+    </div>
+
+    <div class="row">
+      <label>Recipient (payTo):</label>
+      <input id="payto" type="text" placeholder="0xRecipientEOA" />
+    </div>
+
+    <div class="row">
+      <label>Resource URL (bindable):</label>
+      <input id="resource" type="text" placeholder="https://example.com/protected" value="https://api.example.com/data" />
+      <span class="muted">(used in PaymentRequirements and optional witness)</span>
+    </div>
+
+    <div class="row">
+      <label><input id="witness" type="checkbox" /> Bind resource with EIP‑191 "witness"</label>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>🚀 Actions</h2>
+    <div class="row">
+      <button id="btnVerify">Verify only</button>
+      <button id="btnSettle">Verify + Settle</button>
+      <button id="btnConsole">Expose helpers for DevTools</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>📊 Output</h2>
+    <pre id="out">Ready. Configure settings above and click an action button.</pre>
+  </div>
+
+  <script>
+    // ------ Chain & asset config (Base) ------
+    const CHAINS = {
+      "base":        { chainId: 8453,  chainHex: "0x2105", rpc: "https://mainnet.base.org",
+                       explorer: "https://basescan.org",
+                       USDC: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", decimals: 6 },
+      "base-sepolia":{ chainId: 84532, chainHex: "0x14A34", rpc: "https://sepolia.base.org",
+                       explorer: "https://sepolia.basescan.org",
+                       USDC: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", decimals: 6 }
+    };
+
+    // ------ DOM helpers ------
+    const $ = (id) => document.getElementById(id);
+    const out = $("out");
+    const log = (o) => out.textContent = typeof o === "string" ? o : JSON.stringify(o, null, 2);
+
+    // ------ Wallet helpers ------
+    async function ensureWallet() {
+      if (!window.ethereum) throw new Error("No injected wallet (window.ethereum).");
+      const [acct] = await ethereum.request({ method: "eth_requestAccounts" });
+      return acct;
+    }
+
+    async function switchChain(net) {
+      const cfg = CHAINS[net];
+      try {
+        await ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: cfg.chainHex }] });
+      } catch {
+        await ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [{
+            chainId: cfg.chainHex,
+            chainName: net === "base" ? "Base Mainnet" : "Base Sepolia",
+            rpcUrls: [cfg.rpc],
+            blockExplorerUrls: [cfg.explorer],
+            nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 }
+          }]
+        });
+        await ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: cfg.chainHex }] });
+      }
+    }
+
+    // ------ x402: PaymentRequirements ------
+    function toAtomic(amountFloat, decimals) {
+      const n = Number(amountFloat);
+      if (!Number.isFinite(n) || n <= 0) throw new Error("Invalid amount.");
+      return Math.round(n * 10 ** decimals).toString();
+    }
+
+    function buildRequirements(net, amountFloat, payTo, resource) {
+      const cfg = CHAINS[net];
+      const canonical = x402.browser.witness.canonicalizeResource(resource || location.href);
+
+      return {
+        scheme: "exact",
+        network: net,
+        maxAmountRequired: toAtomic(amountFloat, cfg.decimals),
+        resource: canonical,
+        description: "x402 direct facilitator demo",
+        mimeType: "application/json",
+        outputSchema: null,
+        payTo,
+        maxTimeoutSeconds: 60,
+        asset: cfg.USDC,
+        extra: null
+      };
+    }
+
+    // ------ Facilitator client (direct) ------
+    async function facSupported(facilitatorUrl) {
+      const r = await fetch(`${facilitatorUrl.replace(/\/+$/,'')}/supported`);
+      if (!r.ok) throw new Error(`/supported failed: ${r.status}`);
+      return r.json();
+    }
+
+    async function facVerify(facilitatorUrl, headerB64, reqs) {
+      const r = await fetch(`${facilitatorUrl.replace(/\/+$/,'')}/verify`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ x402Version: 1, paymentHeader: headerB64, paymentRequirements: reqs })
+      });
+      const j = await r.json().catch(() => ({}));
+      return { ok: r.ok, body: j };
+    }
+
+    async function facSettle(facilitatorUrl, headerB64, reqs) {
+      const r = await fetch(`${facilitatorUrl.replace(/\/+$/,'')}/settle`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ x402Version: 1, paymentHeader: headerB64, paymentRequirements: reqs })
+      });
+      const j = await r.json().catch(() => ({}));
+      return { ok: r.ok, body: j };
+    }
+
+    // ------ x402 header creation via IIFE ------
+    async function makePaymentHeaderWithXF(reqs, account, chainId) {
+      if (!window.x402 || !x402.client || !x402.client.createPaymentHeader) {
+        throw new Error("x402.client.createPaymentHeader missing in IIFE build");
+      }
+
+      // Create viem client from provider
+      const viemClient = x402.browser.viemAdapter.createViemClientFromProvider(
+        window.ethereum,
+        chainId
+      );
+
+      // Use existing x402 API
+      return await x402.client.createPaymentHeader(
+        viemClient,
+        1, // x402Version
+        reqs
+      );
+    }
+
+    // ------ Orchestrations ------
+    async function runVerifyOnly() {
+      try {
+        log("Step 1/5: Connecting wallet...");
+        const fac = $("fac").value.trim();
+        const net = $("net").value;
+        const acct = await ensureWallet();
+        await switchChain(net);
+
+        const payTo = $("payto").value.trim();
+        const amount = Number($("amount").value);
+        const resource = $("resource").value.trim();
+        const cfg = CHAINS[net];
+
+        log("Step 2/5: Fetching facilitator capabilities...");
+        const supported = await facSupported(fac);
+
+        log("Step 3/5: Building payment requirements...");
+        const reqs = buildRequirements(net, amount, payTo, resource);
+
+        log("Step 4/5: Creating payment header (signing with MetaMask)...");
+        let header = await makePaymentHeaderWithXF(reqs, acct, cfg.chainId);
+
+        // Optional witness
+        if ($("witness").checked) {
+          log("Step 4b/5: Creating EIP-191 witness binding...");
+          const witness = await x402.browser.witness.makeEvmWitness(
+            window.ethereum,
+            acct,
+            reqs.resource
+          );
+          header = x402.browser.witness.addWitnessToPaymentHeader(header, witness);
+        }
+
+        log("Step 5/5: Verifying payment with facilitator...");
+        const v = await facVerify(fac, header, reqs);
+
+        log({
+          step: "verify",
+          supported,
+          ok: v.ok,
+          verify: v.body,
+          paymentHeader: header.slice(0, 100) + "..." // truncate for display
+        });
+      } catch (e) {
+        log({ error: String(e), stack: e.stack });
+      }
+    }
+
+    async function runVerifyAndSettle() {
+      try {
+        log("Step 1/6: Connecting wallet...");
+        const fac = $("fac").value.trim();
+        const net = $("net").value;
+        const acct = await ensureWallet();
+        await switchChain(net);
+
+        const payTo = $("payto").value.trim();
+        const amount = Number($("amount").value);
+        const resource = $("resource").value.trim();
+        const cfg = CHAINS[net];
+
+        log("Step 2/6: Fetching facilitator capabilities...");
+        const supported = await facSupported(fac);
+
+        log("Step 3/6: Building payment requirements...");
+        const reqs = buildRequirements(net, amount, payTo, resource);
+
+        log("Step 4/6: Creating payment header (signing with MetaMask)...");
+        let header = await makePaymentHeaderWithXF(reqs, acct, cfg.chainId);
+
+        // Optional witness
+        if ($("witness").checked) {
+          log("Step 4b/6: Creating EIP-191 witness binding...");
+          const witness = await x402.browser.witness.makeEvmWitness(
+            window.ethereum,
+            acct,
+            reqs.resource
+          );
+          header = x402.browser.witness.addWitnessToPaymentHeader(header, witness);
+        }
+
+        log("Step 5/6: Verifying payment with facilitator...");
+        const v = await facVerify(fac, header, reqs);
+        if (!v.ok || !v.body?.isValid) {
+          return log({ step: "verify_failed", ok: v.ok, verify: v.body });
+        }
+
+        log("Step 6/6: Settling payment on-chain...");
+        const s = await facSettle(fac, header, reqs);
+
+        log({
+          step: "settle",
+          supported,
+          verify: v.body,
+          settle: s.body,
+          success: s.ok && s.body?.success,
+          transaction: s.body?.transaction,
+          explorer: s.body?.transaction ? `${cfg.explorer}/tx/${s.body.transaction}` : null
+        });
+      } catch (e) {
+        log({ error: String(e), stack: e.stack });
+      }
+    }
+
+    // ------ Wire UI ------
+    $("btnSupported").onclick = async () => {
+      try {
+        log("Fetching facilitator capabilities...");
+        const info = await facSupported($("fac").value.trim());
+        log(info);
+      } catch (e) { log({ error: String(e) }); }
+    };
+
+    $("btnSwitch").onclick = () => switchChain($("net").value)
+      .then(() => log({ switched: $("net").value }))
+      .catch(e => log({ error: String(e) }));
+
+    $("btnVerify").onclick = runVerifyOnly;
+    $("btnSettle").onclick = runVerifyAndSettle;
+
+    $("btnConsole").onclick = () => {
+      window.demo = {
+        x402: window.x402,
+        xf: window.xf, // alias
+        CHAINS,
+        facSupported,
+        facVerify,
+        facSettle,
+        buildRequirements,
+        makePaymentHeaderWithXF,
+        runVerifyOnly,
+        runVerifyAndSettle
+      };
+      log("DevTools helpers available as window.demo\n\nTry:\n  demo.x402.browser.witness.canonicalizeResource('https://Example.com:443/path#frag')\n  demo.buildRequirements('base-sepolia', 0.01, '0x...', 'https://api.com/data')");
+    };
+
+    // Check if x402 is available
+    window.addEventListener('DOMContentLoaded', () => {
+      if (typeof window.x402 === 'undefined') {
+        log("ERROR: window.x402 not found!\n\nMake sure the browser IIFE is loaded:\n  <script src=\"../../typescript/packages/x402/dist/umd/browser.global.js\"></script>");
+      } else if (!window.x402.browser) {
+        log("ERROR: window.x402.browser not found!\n\nThe IIFE build may be outdated. Run: pnpm build");
+      } else {
+        log("✅ window.x402 loaded successfully!\n\nversion: " + x402.version + "\nbrowser utilities: " + Object.keys(x402.browser).join(", ") + "\n\n(window.xf is an alias)\n\nConfigure settings above and click an action button.");
+      }
+    });
+  </script>
+</body>
+</html>

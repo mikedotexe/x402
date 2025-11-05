@@ -1,7 +1,8 @@
 /* eslint-env node */
 import { config } from "dotenv";
 import express, { Request, Response } from "express";
-import { verify, settle } from "x402/facilitator";
+import cors from "cors";
+import { verify, settle, checkWitness } from "x402/facilitator";
 import {
   PaymentRequirementsSchema,
   type PaymentRequirements,
@@ -23,6 +24,9 @@ config();
 const EVM_PRIVATE_KEY = process.env.EVM_PRIVATE_KEY || "";
 const SVM_PRIVATE_KEY = process.env.SVM_PRIVATE_KEY || "";
 const SVM_RPC_URL = process.env.SVM_RPC_URL || "";
+const WITNESS_REQUIRED = process.env.WITNESS_REQUIRED === "true";
+const PORT = process.env.PORT || 3000;
+const VERSION = "0.1.0";
 
 if (!EVM_PRIVATE_KEY && !SVM_PRIVATE_KEY) {
   console.error("Missing required environment variables");
@@ -35,6 +39,16 @@ const x402Config: X402Config | undefined = SVM_RPC_URL
   : undefined;
 
 const app = express();
+
+// CORS middleware - permissive by default for hackathon demos
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["content-type", "x-payment"],
+    exposedHeaders: ["x-payment-response"],
+  })
+);
 
 // Configure express to parse JSON bodies
 app.use(express.json());
@@ -49,6 +63,26 @@ type SettleRequest = {
   paymentRequirements: PaymentRequirements;
 };
 
+// Health check endpoint
+app.get("/health", (req: Request, res: Response) => {
+  res.json({
+    status: "ok",
+    timestamp: Date.now(),
+  });
+});
+
+// Version endpoint
+app.get("/version", (req: Request, res: Response) => {
+  res.json({
+    version: VERSION,
+    networks: [
+      ...(EVM_PRIVATE_KEY ? ["base", "base-sepolia"] : []),
+      ...(SVM_PRIVATE_KEY ? ["solana-devnet"] : []),
+    ],
+    witnessRequired: WITNESS_REQUIRED,
+  });
+});
+
 app.get("/verify", (req: Request, res: Response) => {
   res.json({
     endpoint: "/verify",
@@ -62,9 +96,29 @@ app.get("/verify", (req: Request, res: Response) => {
 
 app.post("/verify", async (req: Request, res: Response) => {
   try {
-    const body: VerifyRequest = req.body;
+    const body: any = req.body;
     const paymentRequirements = PaymentRequirementsSchema.parse(body.paymentRequirements);
-    const paymentPayload = PaymentPayloadSchema.parse(body.paymentPayload);
+
+    // Support both paymentHeader (base64 string from HTML demo) and paymentPayload (decoded object)
+    let paymentPayload: PaymentPayload;
+    if (body.paymentHeader && typeof body.paymentHeader === "string") {
+      // Check witness before parsing if required
+      try {
+        checkWitness(body.paymentHeader, WITNESS_REQUIRED);
+      } catch (error: any) {
+        return res.status(400).json({
+          isValid: false,
+          invalidReason: `witness_error: ${error.message}`,
+        });
+      }
+
+      // Decode base64 header to get payload
+      const headerJson = Buffer.from(body.paymentHeader, "base64").toString("utf-8");
+      const header = JSON.parse(headerJson);
+      paymentPayload = PaymentPayloadSchema.parse(header.payload);
+    } else {
+      paymentPayload = PaymentPayloadSchema.parse(body.paymentPayload);
+    }
 
     // use the correct client/signer based on the requested network
     // svm verify requires a Signer because it signs & simulates the txn
@@ -130,9 +184,18 @@ app.get("/supported", async (req: Request, res: Response) => {
 
 app.post("/settle", async (req: Request, res: Response) => {
   try {
-    const body: SettleRequest = req.body;
+    const body: any = req.body;
     const paymentRequirements = PaymentRequirementsSchema.parse(body.paymentRequirements);
-    const paymentPayload = PaymentPayloadSchema.parse(body.paymentPayload);
+
+    // Support both paymentHeader (base64) and paymentPayload (object)
+    let paymentPayload: PaymentPayload;
+    if (body.paymentHeader && typeof body.paymentHeader === "string") {
+      const headerJson = Buffer.from(body.paymentHeader, "base64").toString("utf-8");
+      const header = JSON.parse(headerJson);
+      paymentPayload = PaymentPayloadSchema.parse(header.payload);
+    } else {
+      paymentPayload = PaymentPayloadSchema.parse(body.paymentPayload);
+    }
 
     // use the correct private key based on the requested network
     let signer: Signer;
@@ -146,6 +209,31 @@ app.post("/settle", async (req: Request, res: Response) => {
 
     // settle
     const response = await settle(signer, paymentPayload, paymentRequirements, x402Config);
+
+    // Structured logging for successful settlements
+    if (response.transaction) {
+      const explorerUrls: Record<string, string> = {
+        "base": "https://basescan.org",
+        "base-sepolia": "https://sepolia.basescan.org",
+        "solana-devnet": "https://explorer.solana.com/?cluster=devnet",
+      };
+      const explorerUrl = explorerUrls[paymentRequirements.network];
+      const txUrl = explorerUrl ? `${explorerUrl}/tx/${response.transaction}` : null;
+
+      console.log(
+        JSON.stringify({
+          event: "settlement_success",
+          network: paymentRequirements.network,
+          txHash: response.transaction,
+          payTo: paymentRequirements.payTo,
+          amount: paymentRequirements.amount?.toString(),
+          asset: paymentRequirements.asset,
+          explorerUrl: txUrl,
+          timestamp: new Date().toISOString(),
+        })
+      );
+    }
+
     res.json(response);
   } catch (error) {
     console.error("error", error);
@@ -153,6 +241,8 @@ app.post("/settle", async (req: Request, res: Response) => {
   }
 });
 
-app.listen(process.env.PORT || 3000, () => {
-  console.log(`Server listening at http://localhost:${process.env.PORT || 3000}`);
+app.listen(PORT, () => {
+  console.log(`Server listening at http://localhost:${PORT}`);
+  console.log(`Witness verification: ${WITNESS_REQUIRED ? "REQUIRED" : "optional"}`);
+  console.log(`Available endpoints: /health, /version, /supported, /verify, /settle`);
 });

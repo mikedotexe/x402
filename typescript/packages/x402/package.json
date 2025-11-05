@@ -1,9 +1,11 @@
 {
   "name": "x402",
   "version": "0.6.6",
+  "type": "module",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
-  "types": "./dist/cjs/index.d.ts",
+  "browser": "./dist/umd/browser.global.js",
+  "types": "./dist/esm/index.d.ts",
   "scripts": {
     "start": "tsx --env-file=.env index.ts",
     "build": "tsup",
@@ -28,6 +30,7 @@
     "@esbuild-plugins/node-modules-polyfill": "^0.2.2",
     "@eslint/js": "^9.24.0",
     "@noble/curves": "^2.0.1",
+    "@types/jsdom": "^27.0.0",
     "@types/node": "^22.13.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -41,6 +44,7 @@
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-jsdoc": "^50.6.9",
     "eslint-plugin-prettier": "^5.2.6",
+    "jsdom": "^27.1.0",
     "prettier": "3.5.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -59,13 +63,13 @@
     "@solana-program/token-2022": "^0.4.2",
     "@solana/kit": "^2.1.1",
     "@solana/transaction-confirmation": "^2.1.1",
+    "ethers": "^6.15.0",
     "viem": "^2.21.26",
     "wagmi": "^2.15.6",
     "zod": "^3.24.2"
   },
-  "browser": "./dist/index.global.js",
-  "unpkg": "./dist/index.global.js",
-  "jsdelivr": "./dist/index.global.js",
+  "unpkg": "./dist/umd/browser.global.js",
+  "jsdelivr": "./dist/umd/browser.global.js",
   "exports": {
     "./browser": {
       "types": "./dist/esm/browser/index.d.mts",
