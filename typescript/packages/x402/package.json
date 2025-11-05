@@ -4,7 +4,7 @@
   "type": "module",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
-  "browser": "./dist/umd/browser.global.js",
+  "browser": "./dist/x402.iife.global.js",
   "types": "./dist/esm/index.d.ts",
   "scripts": {
     "start": "tsx --env-file=.env index.ts",
@@ -68,8 +68,8 @@
     "wagmi": "^2.15.6",
     "zod": "^3.24.2"
   },
-  "unpkg": "./dist/umd/browser.global.js",
-  "jsdelivr": "./dist/umd/browser.global.js",
+  "unpkg": "./dist/x402.iife.global.js",
+  "jsdelivr": "./dist/x402.iife.global.js",
   "exports": {
     "./browser": {
       "types": "./dist/esm/browser/index.d.mts",

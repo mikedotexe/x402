@@ -46,9 +46,9 @@ Create `payment.html`:
   <title>x402 Payment Demo</title>
 
   <!-- Load x402 from CDN (or local build) -->
-  <script src="https://unpkg.com/@coinbase/x402/dist/umd/browser.global.js"></script>
+  <script src="https://unpkg.com/@coinbase/x402/dist/x402.iife.global.js"></script>
   <!-- or use local: -->
-  <!-- <script src="../../typescript/packages/x402/dist/umd/browser.global.js"></script> -->
+  <!-- <script src="../../typescript/packages/x402/dist/x402.iife.global.js"></script> -->
 </head>
 <body>
   <h1>Pay with USDC</h1>
@@ -70,7 +70,7 @@ Create `payment.html`:
       const account = accounts[0];
 
       // Create viem client from MetaMask
-      const viemClient = window.x402.browser.viemAdapter.createViemClientFromProvider(
+      const viemClient = window.xf.browser.viemAdapter.createViemClientFromProvider(
         window.ethereum,
         chainId
       );
@@ -87,7 +87,7 @@ Create `payment.html`:
 
       // Create payment header (prompts MetaMask signature)
       status.textContent = "Creating payment (sign in MetaMask)...";
-      let header = await window.x402.client.createPaymentHeader(
+      let header = await window.xf.client.createPaymentHeader(
         viemClient,
         1, // x402Version
         requirements
@@ -138,11 +138,11 @@ Create `payment.html`:
     document.getElementById("payBtn").onclick = pay;
 
     // Check if x402 loaded
-    if (typeof window.x402 === "undefined") {
-      document.getElementById("status").textContent = "ERROR: x402 not loaded!";
+    if (typeof window.xf === "undefined") {
+      document.getElementById("status").textContent = "ERROR: xf not loaded!";
     } else {
-      console.log("x402 loaded! Version:", window.x402.version);
-      console.log("window.xf is an alias:", window.xf === window.x402);
+      console.log("xf loaded! Version:", window.xf.version);
+      console.log("window.x402 is an alias:", window.x402 === window.xf);
     }
   </script>
 </body>
@@ -179,12 +179,12 @@ Witness binding proves the payment was created for a specific resource (prevents
 
 ```javascript
 // After creating payment header, add witness:
-const witness = await window.x402.browser.witness.makeEvmWitness(
+const witness = await window.xf.browser.witness.makeEvmWitness(
   window.ethereum,
   account,
   requirements.resource
 );
-header = window.x402.browser.witness.addWitnessToPaymentHeader(header, witness);
+header = window.xf.browser.witness.addWitnessToPaymentHeader(header, witness);
 ```
 
 Enable witness verification in your facilitator:
@@ -196,9 +196,9 @@ WITNESS_REQUIRED=true
 
 ## Troubleshooting
 
-### "x402 not loaded"
+### "xf not loaded"
 - Check CDN URL or local path
-- Open DevTools Console → should see `window.x402`
+- Open DevTools Console → should see `window.xf`
 
 ### "User rejected signature"
 - User cancelled MetaMask prompt
@@ -232,10 +232,10 @@ WITNESS_REQUIRED=true
 
 ## API Reference
 
-### window.x402 (and window.xf alias)
+### window.xf (and window.x402 alias)
 
 ```typescript
-window.x402 = {
+window.xf = {
   version: "iife",
 
   client: {

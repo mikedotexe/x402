@@ -20,14 +20,14 @@ describe("IIFE Bundle Smoke Tests", () => {
 
   beforeAll(() => {
     // Load the IIFE bundle
-    iifePath = join(__dirname, "../dist/umd/browser.global.js");
+    iifePath = join(__dirname, "../dist/x402.iife.global.js");
     iifeCode = readFileSync(iifePath, "utf-8");
   });
 
   it("bundle file exists and has reasonable size", () => {
     const stats = statSync(iifePath);
-    expect(stats.size).toBeGreaterThan(1000000); // Should be > 1MB (viem + x402)
-    expect(stats.size).toBeLessThan(10000000); // Should be < 10MB
+    expect(stats.size).toBeGreaterThan(500000); // Should be > 500KB (minified viem + x402)
+    expect(stats.size).toBeLessThan(5000000); // Should be < 5MB (minified)
   });
 
   it("contains x402 banner", () => {
@@ -36,18 +36,18 @@ describe("IIFE Bundle Smoke Tests", () => {
     expect(iifeCode).toContain("https://github.com/coinbase/x402");
   });
 
-  it("creates x402 global with Object.defineProperty", () => {
-    expect(iifeCode).toContain("Object.defineProperty(globalThis, 'x402'");
+  it("creates xf global with Object.defineProperty", () => {
+    expect(iifeCode).toContain("Object.defineProperty(globalThis, 'xf'");
     expect(iifeCode).toContain("configurable: false");
     expect(iifeCode).toContain("enumerable: true");
   });
 
-  it("creates xf alias with Object.defineProperty", () => {
-    expect(iifeCode).toContain("Object.defineProperty(globalThis, 'xf'");
+  it("creates x402 alias with Object.defineProperty", () => {
+    expect(iifeCode).toContain("Object.defineProperty(globalThis, 'x402'");
   });
 
-  it("xf alias points to x402 global", () => {
-    expect(iifeCode).toContain("value: globalThis.x402");
+  it("x402 alias points to xf global", () => {
+    expect(iifeCode).toContain("value: globalThis.xf");
   });
 
   it("contains viem client factory", () => {
@@ -90,7 +90,7 @@ describe("IIFE Bundle Smoke Tests", () => {
   });
 
   it("has IIFE wrapper structure", () => {
-    // Modern build uses arrow function: var x402 = (() => {
-    expect(iifeCode).toMatch(/var x402\s*=\s*\(/);
+    // Modern build uses arrow function: var xf = (() => {
+    expect(iifeCode).toMatch(/var xf\s*=\s*\(/);
   });
 });

@@ -5,8 +5,8 @@
   <title>x402 IIFE — Direct Facilitator (Base + optional EVM witness)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- IIFE build exposes immutable window.x402 (and window.xf alias) -->
-  <script src="../../typescript/packages/x402/dist/umd/browser.global.js"></script>
+  <!-- IIFE build exposes immutable window.xf (and window.x402 alias) -->
+  <script src="../../typescript/packages/x402/dist/x402.iife.global.js"></script>
 
   <!-- Minimal helper for keccak + signature utilities -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@6/dist/ethers.min.js"></script>
@@ -84,7 +84,7 @@
 <body>
   <div class="header">
     <h1>x402 Direct Facilitator Demo</h1>
-    <p>Pay-per-use API with window.x402 + optional EIP-191 witness binding</p>
+    <p>Pay-per-use API with window.xf + optional EIP-191 witness binding</p>
     <p style="opacity: 0.9; font-size: 0.9rem;">Base Sepolia • EIP-3009 • USDC • Direct facilitator integration</p>
   </div>
 
@@ -191,7 +191,7 @@
 
     function buildRequirements(net, amountFloat, payTo, resource) {
       const cfg = CHAINS[net];
-      const canonical = x402.browser.witness.canonicalizeResource(resource || location.href);
+      const canonical = xf.browser.witness.canonicalizeResource(resource || location.href);
 
       return {
         scheme: "exact",
@@ -237,18 +237,18 @@
 
     // ------ x402 header creation via IIFE ------
     async function makePaymentHeaderWithXF(reqs, account, chainId) {
-      if (!window.x402 || !x402.client || !x402.client.createPaymentHeader) {
-        throw new Error("x402.client.createPaymentHeader missing in IIFE build");
+      if (!window.x402 || !xf.client || !xf.client.createPaymentHeader) {
+        throw new Error("xf.client.createPaymentHeader missing in IIFE build");
       }
 
       // Create viem client from provider
-      const viemClient = x402.browser.viemAdapter.createViemClientFromProvider(
+      const viemClient = xf.browser.viemAdapter.createViemClientFromProvider(
         window.ethereum,
         chainId
       );
 
       // Use existing x402 API
-      return await x402.client.createPaymentHeader(
+      return await xf.client.createPaymentHeader(
         viemClient,
         1, // x402Version
         reqs
@@ -281,12 +281,12 @@
         // Optional witness
         if ($("witness").checked) {
           log("Step 4b/5: Creating EIP-191 witness binding...");
-          const witness = await x402.browser.witness.makeEvmWitness(
+          const witness = await xf.browser.witness.makeEvmWitness(
             window.ethereum,
             acct,
             reqs.resource
           );
-          header = x402.browser.witness.addWitnessToPaymentHeader(header, witness);
+          header = xf.browser.witness.addWitnessToPaymentHeader(header, witness);
         }
 
         log("Step 5/5: Verifying payment with facilitator...");
@@ -329,12 +329,12 @@
         // Optional witness
         if ($("witness").checked) {
           log("Step 4b/6: Creating EIP-191 witness binding...");
-          const witness = await x402.browser.witness.makeEvmWitness(
+          const witness = await xf.browser.witness.makeEvmWitness(
             window.ethereum,
             acct,
             reqs.resource
           );
-          header = x402.browser.witness.addWitnessToPaymentHeader(header, witness);
+          header = xf.browser.witness.addWitnessToPaymentHeader(header, witness);
         }
 
         log("Step 5/6: Verifying payment with facilitator...");
@@ -378,8 +378,8 @@
 
     $("btnConsole").onclick = () => {
       window.demo = {
-        x402: window.x402,
-        xf: window.xf, // alias
+        xf: window.xf,
+        x402: window.x402, // alias
         CHAINS,
         facSupported,
         facVerify,
@@ -389,17 +389,17 @@
         runVerifyOnly,
         runVerifyAndSettle
       };
-      log("DevTools helpers available as window.demo\n\nTry:\n  demo.x402.browser.witness.canonicalizeResource('https://Example.com:443/path#frag')\n  demo.buildRequirements('base-sepolia', 0.01, '0x...', 'https://api.com/data')");
+      log("DevTools helpers available as window.demo\n\nTry:\n  demo.xf.browser.witness.canonicalizeResource('https://Example.com:443/path#frag')\n  demo.buildRequirements('base-sepolia', 0.01, '0x...', 'https://api.com/data')");
     };
 
     // Check if x402 is available
     window.addEventListener('DOMContentLoaded', () => {
-      if (typeof window.x402 === 'undefined') {
-        log("ERROR: window.x402 not found!\n\nMake sure the browser IIFE is loaded:\n  <script src=\"../../typescript/packages/x402/dist/umd/browser.global.js\"></script>");
-      } else if (!window.x402.browser) {
-        log("ERROR: window.x402.browser not found!\n\nThe IIFE build may be outdated. Run: pnpm build");
+      if (typeof window.xf === 'undefined') {
+        log("ERROR: window.xf not found!\n\nMake sure the browser IIFE is loaded:\n  <script src=\"../../typescript/packages/x402/dist/x402.iife.global.js\"></script>");
+      } else if (!window.xf.browser) {
+        log("ERROR: window.xf.browser not found!\n\nThe IIFE build may be outdated. Run: pnpm build");
       } else {
-        log("✅ window.x402 loaded successfully!\n\nversion: " + x402.version + "\nbrowser utilities: " + Object.keys(x402.browser).join(", ") + "\n\n(window.xf is an alias)\n\nConfigure settings above and click an action button.");
+        log("✅ window.xf loaded successfully!\n\nversion: " + xf.version + "\nbrowser utilities: " + Object.keys(xf.browser).join(", ") + "\n\n(window.x402 is an alias)\n\nConfigure settings above and click an action button.");
       }
     });
   </script>

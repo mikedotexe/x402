@@ -1,6 +1,6 @@
-// Lightweight, browser-safe surface for IIFE global `x402`.
+// Lightweight, browser-safe surface for IIFE global `xf`.
 // Re-exports are intentionally narrow for hackathon console use.
-// Both window.x402 (canonical) and window.xf (alias) are exposed.
+// Both window.xf (canonical) and window.x402 (alias) are exposed.
 
 import * as client from "../client";
 import * as schemes from "../schemes";
@@ -10,7 +10,7 @@ import * as facilitatorUtils from "../facilitator";
 import * as viemAdapter from "./viem-adapter";
 import * as witness from "./witness";
 
-type X402 = {
+type XF = {
   version: string;
   client: typeof client;
   schemes: typeof schemes;
@@ -23,7 +23,7 @@ type X402 = {
   };
 };
 
-function attachGlobal(): X402 | undefined {
+function attachGlobal(): XF | undefined {
   const g =
     (globalThis as any) ??
     (typeof self !== "undefined" ? (self as any) : undefined) ??
@@ -31,7 +31,7 @@ function attachGlobal(): X402 | undefined {
 
   if (!g) return;
 
-  const api: X402 = {
+  const api: XF = {
     version: "iife",
     client,
     schemes,
@@ -44,22 +44,22 @@ function attachGlobal(): X402 | undefined {
     },
   };
 
-  // If the banner already created g.x402, merge onto it (then footer freezes).
-  if (!g.x402) {
-    Object.defineProperty(g, "x402", { value: {}, configurable: true, writable: true });
-  }
-  Object.assign(g.x402, api);
-
-  // Create xf as a convenience alias pointing to the same object
+  // If the banner already created g.xf, merge onto it (then footer freezes).
   if (!g.xf) {
-    Object.defineProperty(g, "xf", { value: g.x402, configurable: true, writable: true });
+    Object.defineProperty(g, "xf", { value: {}, configurable: true, writable: true });
+  }
+  Object.assign(g.xf, api);
+
+  // Create x402 as a convenience alias pointing to the same object
+  if (!g.x402) {
+    Object.defineProperty(g, "x402", { value: g.xf, configurable: true, writable: true });
   }
 
   return api;
 }
 
-// When bundled as IIFE, this executes once and populates window.x402 and window.xf
+// When bundled as IIFE, this executes once and populates window.xf and window.x402
 attachGlobal();
 
-export type { X402 };
-export type XF = X402; // Alias for backward compatibility
+export type { XF };
+export type X402 = XF; // Alias for backward compatibility

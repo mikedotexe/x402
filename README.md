@@ -47,19 +47,19 @@ See [examples/typescript/servers](examples/typescript/servers) for Express, Hono
 
 ```html
 <!-- Load x402 from CDN -->
-<script src="https://unpkg.com/@coinbase/x402/dist/umd/browser.global.js"></script>
+<script src="https://unpkg.com/@coinbase/x402/dist/x402.iife.global.js"></script>
 
 <script>
-  // window.x402 is now available (window.xf is an alias)
+  // window.xf is now available (window.x402 is an alias)
 
   // Create viem client from MetaMask
-  const viemClient = window.x402.browser.viemAdapter.createViemClientFromProvider(
+  const viemClient = window.xf.browser.viemAdapter.createViemClientFromProvider(
     window.ethereum,
     84532 // Base Sepolia
   );
 
   // Create payment header
-  const header = await window.x402.client.createPaymentHeader(
+  const header = await window.xf.client.createPaymentHeader(
     viemClient,
     1, // x402Version
     {

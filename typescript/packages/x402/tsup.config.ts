@@ -2,8 +2,8 @@ import { defineConfig } from "tsup";
 import { NodeGlobalsPolyfillPlugin } from "@esbuild-plugins/node-globals-polyfill";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
 
-const GLOBAL_NAME = "x402";
-const GLOBAL_ALIAS = "xf"; // Convenience alias
+const GLOBAL_NAME = "xf"; // Canonical global name
+const GLOBAL_ALIAS = "x402"; // Convenience alias
 const PKG_NAME = "x402";
 const PKG_VERSION = "0.6.6"; // TODO: Import from package.json when tsup supports it
 
@@ -14,13 +14,13 @@ const banner = (format: string) =>
 
 // Footer to lock down the global and alias in IIFE
 const footerRedefiningGlobal = `
-// Freeze x402 global (canonical)
+// Freeze xf global (canonical)
 Object.defineProperty(globalThis, '${GLOBAL_NAME}', {
   value: ${GLOBAL_NAME},
   enumerable: true,
   configurable: false,
 });
-// Freeze xf alias (convenience)
+// Freeze x402 alias (convenience)
 Object.defineProperty(globalThis, '${GLOBAL_ALIAS}', {
   value: globalThis.${GLOBAL_NAME},
   enumerable: true,
@@ -78,9 +78,9 @@ export default defineConfig([
   {
     name: "browser-iife",
     entry: {
-      browser: "src/browser/index.ts",
+      "x402.iife": "src/browser/index.ts",
     },
-    outDir: "dist/umd",
+    outDir: "dist",
     format: ["iife"],
     globalName: GLOBAL_NAME,
     bundle: true,
@@ -90,8 +90,9 @@ export default defineConfig([
     // Bundle everything for browsers
     noExternal: [/.*/],
     esbuildPlugins: [
+      // Minimal polyfills (crypto module for Node.js compatibility, buffer for viem)
       NodeModulesPolyfillPlugin(),
-      NodeGlobalsPolyfillPlugin({ process: true, buffer: true }),
+      NodeGlobalsPolyfillPlugin({ buffer: true, process: false }),
     ],
     esbuildOptions(options) {
       // Add initializer banner for global setup
@@ -108,10 +109,12 @@ ${banner("IIFE")}
   }
 })();`.trim(),
       };
+      // Ensure browser-only build
+      options.platform = "browser";
     },
     dts: false, // No types needed for IIFE
     sourcemap: true,
-    minify: false,
+    minify: true, // Enable minification for smaller bundle
     clean: true,
     keepNames: true,
     footer: { js: footerRedefiningGlobal },

@@ -20,7 +20,7 @@ This branch adds comprehensive browser support for x402 with:
 #### viem-adapter.ts (80 lines)
 Converts EIP-1193 providers → viem WalletClient:
 ```typescript
-const client = x402.browser.viemAdapter.createViemClientFromProvider(
+const client = xf.browser.viemAdapter.createViemClientFromProvider(
   window.ethereum,
   84532 // Base Sepolia
 );
@@ -32,19 +32,19 @@ Supports: Base, Base Sepolia, Ethereum Mainnet, Sepolia
 EIP-191 witness binding utilities:
 ```typescript
 // Canonicalize URL (same as Rust)
-const canonical = x402.browser.witness.canonicalizeResource(
+const canonical = xf.browser.witness.canonicalizeResource(
   "https://Example.com:443/path#frag"
 ); // "https://example.com/path"
 
 // Create witness
-const witness = await x402.browser.witness.makeEvmWitness(
+const witness = await xf.browser.witness.makeEvmWitness(
   window.ethereum,
   walletAddress,
   "https://api.example.com/protected"
 );
 
 // Attach to payment
-const headerWithWitness = x402.browser.witness.addWitnessToPaymentHeader(
+const headerWithWitness = xf.browser.witness.addWitnessToPaymentHeader(
   paymentHeader,
   witness
 );
@@ -103,25 +103,25 @@ Complete working demo showing:
 **Usage**:
 ```html
 <!-- Load IIFE -->
-<script src="../../typescript/packages/x402/dist/umd/browser.global.js"></script>
+<script src="../../typescript/packages/x402/dist/x402.iife.global.js"></script>
 
-<!-- Use window.x402 API (window.xf is also available as an alias) -->
+<!-- Use window.xf API (window.x402 is also available as an alias) -->
 <script>
 // Create payment
-const viemClient = x402.browser.viemAdapter.createViemClientFromProvider(
+const viemClient = xf.browser.viemAdapter.createViemClientFromProvider(
   window.ethereum,
   84532
 );
 
-const header = await x402.client.createPaymentHeader(
+const header = await xf.client.createPaymentHeader(
   viemClient,
   1,
   paymentRequirements
 );
 
 // Optional witness
-const witness = await x402.browser.witness.makeEvmWitness(...);
-const headerWithWitness = x402.browser.witness.addWitnessToPaymentHeader(...);
+const witness = await xf.browser.witness.makeEvmWitness(...);
+const headerWithWitness = xf.browser.witness.addWitnessToPaymentHeader(...);
 
 // Call facilitator
 const result = await fetch("http://localhost:8080/verify", {
@@ -224,10 +224,10 @@ try {
 - `checkOptionalWitnessFromHeaderB64(header)` - Extract and check
 - `checkWitness(header, required)` - Environment-based enforcement
 
-## window.x402 API Surface
+## window.xf API Surface
 
 ```typescript
-window.x402 = {
+window.xf = {
   version: "iife",
 
   // Existing x402 APIs
@@ -261,8 +261,8 @@ window.x402 = {
 };
 
 // Global is frozen and non-configurable
-Object.isFrozen(window.x402); // true
-window.xf === window.x402; // true (xf is an alias)
+Object.isFrozen(window.xf); // true
+window.x402 === window.xf; // true (x402 is an alias)
 ```
 
 ## Witness Binding Specification
