@@ -1,11 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { ed25519 } from "@noble/curves/ed25519";
+import { ed25519 } from "@noble/curves/ed25519.js";
 import { decodeSignedDelegateActionB64, prettySDA } from "../src/facilitator/near/borsh";
 import { signDelegateActionB64 } from "./near.fixture";
 
 describe("NEP-366 encode/decode", () => {
   it("round-trips a SignedDelegateAction (ft_transfer, 1 yocto)", () => {
-    const priv = ed25519.utils.randomPrivateKey();  // test-only
+    const priv = ed25519.utils.randomSecretKey();  // test-only (32 bytes)
     const { sda_b64, pubkey32 } = signDelegateActionB64({
       sender_id: "alice.testnet",
       ft_contract: "usdc.testnet",
