@@ -9,6 +9,8 @@ import * as verifyUtils from "../verify";
 import * as facilitatorUtils from "../facilitator";
 import * as viemAdapter from "./viem-adapter";
 import * as witness from "./witness";
+import * as near from "./near";
+import * as near_delegate from "./near_delegate";
 
 type XF = {
   version: string;
@@ -20,6 +22,8 @@ type XF = {
   browser: {
     viemAdapter: typeof viemAdapter;
     witness: typeof witness;
+    near: typeof near;
+    near_delegate: typeof near_delegate;
   };
 };
 
@@ -41,6 +45,8 @@ function attachGlobal(): XF | undefined {
     browser: {
       viemAdapter,
       witness,
+      near,
+      near_delegate,
     },
   };
 
